@@ -1,0 +1,130 @@
+#include <stdlib.h>
+#include <DHT.h>
+#include<LiquidCrystal.h>
+LiquidCrystal lcd(13,12,11,10,9,8);
+#define DHTPIN 5        
+#define DHTTYPE DHT11     
+DHT dht(DHTPIN, DHTTYPE); 
+#define SSID "Anand"     
+#define PASS "Deepama03"      
+#define IP "184.106.153.149"
+String msg = "GET /update?key=V20VDMS8XIWRPXDF"; 
+float temp;
+int hum;
+int error;
+void setup()
+
+{
+  lcd.begin(16,2);
+  lcd.clear();
+  lcd.print("Humidity and");
+  lcd.setCursor(0,1);
+  lcd.print("Temperature");
+  delay(2000);
+  lcd.clear();
+  lcd.print("Measurement with");
+  lcd.setCursor(0,1);
+  lcd.print("Thingspeak");
+  delay(2000);
+  Serial.begin(115200); 
+  Serial.println("AT");
+  dht.begin();
+  lcd.clear();
+  lcd.print("WIFI Connecting");
+  lcd.setCursor(0,1);
+  lcd.print("Please wait....");
+  delay(5000);
+  if(Serial.find("OK")){
+
+    connectWiFi();
+
+  }
+
+  lcd.clear();
+  lcd.print("WIFI Connected");
+
+}
+
+void loop(){
+   start: 
+  error=0;
+  temp = dht.readTemperature();
+  hum = dht.readHumidity();
+  lcd.setCursor(0,0);
+  lcd.print("Humidity:");
+  lcd.print(hum);   
+  lcd.print(" % ");
+  lcd.setCursor(0,1);
+  lcd.print("Temperature:");
+  lcd.print(temp);   
+  lcd.print("'C");
+  updateTemp();
+  if (error==1){
+
+    goto start;
+
+  }
+
+  delay(5000);
+
+}
+
+void updateTemp(){
+
+  String cmd = "AT+CIPSTART=\"TCP\",\"";
+  cmd += IP;
+  cmd += "\",80";
+  Serial.println(cmd);
+  delay(2000);
+  if(Serial.find("Error")){
+  
+    return;
+
+  }
+
+  cmd = msg ;
+  cmd += "&field1=";  
+  cmd += String(temp);
+  cmd += "&field2="; 
+  cmd += String(hum);
+  cmd += "\r\n";
+  Serial.print("AT+CIPSEND=");
+  Serial.println(cmd.length());
+  if(Serial.find(">")){
+  
+    Serial.print(cmd);
+
+  }
+
+  else{
+
+    Serial.println("AT+CIPCLOSE");
+    error=1;
+
+  }
+
+}
+
+  boolean connectWiFi(){
+
+  Serial.println("AT+CWMODE=1");
+  delay(2000);
+  String cmd="AT+CWJAP=\"";
+  cmd+=SSID;
+  cmd+="\",\"";
+  cmd+=PASS;
+  cmd+="\"";
+  Serial.println(cmd);
+  delay(5000);
+  
+  if(Serial.find("OK")){
+
+    return true;
+
+  }else{
+
+    return false;
+
+  }
+
+}
